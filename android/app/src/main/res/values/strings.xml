@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MyFixly</string>
+    <string name="title_activity_main">MyFixly</string>
+    <string name="package_name">com.myfixly.ng</string>
+    <string name="custom_url_scheme">com.myfixly.ng</string>
+</resources>
