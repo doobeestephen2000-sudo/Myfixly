@@ -13,15 +13,19 @@ dist-ssr/
 .env.test.local
 .env.production.local
 
-# Capacitor / Android
+# TanStack generated files
+.tanstack/
+
+# Capacitor / Android generated files
 android/.gradle/
+android/.gradle-user-home/
 android/build/
 android/app/build/
 android/app/.cxx/
 android/.idea/
 android/local.properties
 
-# Generated APK/AAB files
+# Generated APK/AAB and signing files
 *.apk
 *.aab
 *.jks
@@ -54,8 +58,3 @@ pnpm-debug.log*
 
 # Test coverage
 coverage/
-# Android Gradle generated cache
-android/.gradle-user-home/
-android/.gradle/
-# TanStack generated files
-.tanstack/
