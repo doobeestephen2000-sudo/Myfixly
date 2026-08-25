@@ -1,108 +1,65 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Menu, X, Zap } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { CircleHelp, House, Info, LayoutDashboard, LogOut, Mail, Menu, Search, Settings, X, Zap, ClipboardList } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 
-const nav = [
-  { to: "/", label: "Home" },
-  { to: "/mechanics", label: "Find Artisans" },
-  { to: "/about", label: "About" },
-  { to: "/faq", label: "FAQ" },
-  { to: "/contact", label: "Contact" },
-];
+const publicNav = [{ to: "/", label: "Home", icon: House }, { to: "/mechanics", label: "Find Artisans", icon: Search }, { to: "/about", label: "About", icon: Info }, { to: "/faq", label: "Help", icon: CircleHelp }, { to: "/contact", label: "Contact", icon: Mail }] as const;
+const memberNav = [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, { to: "/mechanics", label: "Find Artisans", icon: Search }, { to: "/faq", label: "FAQ", icon: CircleHelp }, { to: "/contact", label: "Contact", icon: Mail }, { to: "/settings", label: "Settings", icon: Settings }] as const;
+const artisanNav = [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, { to: "/dashboard", label: "Job Requests", icon: ClipboardList }, { to: "/settings", label: "Settings", icon: Settings }, { to: "/contact", label: "Contact", icon: Mail }] as const;
 
 export function SiteHeader() {
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [isArtisan, setIsArtisan] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigation = user ? (isArtisan ? artisanNav : memberNav) : publicNav;
 
   useEffect(() => {
-    const syncUser = (nextUser: User | null) => setUser(nextUser);
-
-    supabase.auth.getSession().then(({ data }) => syncUser(data.session?.user ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      syncUser(session?.user ?? null);
-    });
+    const setSession = async (session: { user: User } | null) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) return setIsArtisan(false);
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", session.user.id);
+      setIsArtisan((data ?? []).some((row) => row.role === "artisan" || row.role === "mechanic"));
+    };
+    void supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => { void setSession(session); });
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
 
-  return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 shadow-soft backdrop-blur supports-[backdrop-filter]:bg-background/75">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-hero text-primary-foreground shadow-elegant">
-            <Zap className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="text-primary">My</span>
-            <span className="text-foreground">Fixly</span>
-          </span>
-        </Link>
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-        <nav className="hidden items-center gap-1 md:flex">
-          {nav.map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground data-[active]:text-primary"
-              activeProps={{ "data-active": "true" } as never}
-              activeOptions={{ exact: n.to === "/" }}
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
 
-        <div className="hidden items-center gap-2 md:flex">
-          {user ? (
-            <>
-              <Button asChild size="sm"><Link to="/dashboard">Dashboard</Link></Button>
-            </>
-          ) : (
-            <>
-              <Button asChild variant="ghost" size="sm"><Link to="/auth">Sign in</Link></Button>
-              <Button asChild size="sm" className="shadow-elegant"><Link to="/auth" search={{ mode: "signup" }}>Register</Link></Button>
-            </>
-          )}
-        </div>
+  async function signOut() {
+    setMenuOpen(false);
+    const { error } = await supabase.auth.signOut();
+    if (!error) await navigate({ to: "/auth" });
+  }
 
-        <button
-          className="rounded-xl p-2 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-          aria-expanded={open}
-        >
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
-
-      {open && (
-        <div className="absolute inset-x-0 top-full border-t border-border/60 bg-background/98 shadow-card md:hidden">
-          <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4">
-            {nav.map((n) => (
-              <Link key={n.to} to={n.to} className="rounded-xl px-3 py-3 text-sm font-medium transition-colors hover:bg-accent data-[active]:bg-primary/10 data-[active]:text-primary" activeProps={{ "data-active": "true" } as never} activeOptions={{ exact: n.to === "/" }}>
-                {n.label}
-              </Link>
-            ))}
-            <div className="mt-3 grid gap-2 border-t border-border/70 pt-3 sm:grid-cols-2">
-              {user ? (
-                <>
-                  <Button asChild size="lg" className="w-full shadow-elegant"><Link to="/dashboard">Dashboard</Link></Button>
-                </>
-              ) : (
-                <>
-                  <Button asChild variant="outline" size="lg" className="w-full"><Link to="/auth">Sign in</Link></Button>
-                  <Button asChild size="lg" className="w-full shadow-elegant"><Link to="/auth" search={{ mode: "signup" }}>Register</Link></Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </header>
-  );
+  return <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/95 shadow-soft backdrop-blur supports-[backdrop-filter]:bg-background/85">
+    <div className="relative mx-auto flex min-h-16 max-w-7xl items-center px-4 py-2 sm:px-6 lg:px-8">
+      <Button variant="ghost" size="icon" className="z-10 h-10 w-10 md:hidden" onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" aria-expanded={menuOpen}><Menu className="h-5 w-5" /></Button>
+      <Link to="/" className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 font-display text-lg font-bold md:static md:translate-x-0" aria-label="Myfixly home"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-hero text-primary-foreground shadow-elegant"><Zap className="h-5 w-5" /></span><span className="text-foreground">Myfixly</span></Link>
+      <nav className="ml-5 hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex" aria-label="Primary navigation">{navigation.map((item) => { const Icon = item.icon; return <Link key={item.to} to={item.to} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground data-[active]:bg-primary/10 data-[active]:text-primary" activeProps={{ "data-active": "true" } as never} activeOptions={{ exact: item.to === "/" }}><Icon className="h-4 w-4" />{item.label}</Link>; })}</nav>
+      <div className="ml-auto flex min-w-10 items-center justify-end gap-2">{user ? <Button asChild size="sm" className="hidden shadow-elegant md:inline-flex"><Link to="/dashboard">Open dashboard</Link></Button> : <><Button asChild variant="ghost" size="sm" className="hidden md:inline-flex"><Link to="/auth">Sign in</Link></Button><Button asChild size="sm" className="hidden shadow-elegant md:inline-flex"><Link to="/auth" search={{ mode: "signup" }}>Join</Link></Button></>}</div>
+    </div>
+    {menuOpen && typeof document !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-[2147483647] isolate md:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
+        <button className="absolute inset-0 z-0 bg-black/35" aria-label="Close navigation menu" onClick={() => setMenuOpen(false)} />
+        <aside className="relative z-10 flex h-[100dvh] w-[min(21rem,88vw)] flex-col overflow-y-auto border-r border-border bg-background px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] text-foreground opacity-100 shadow-2xl [backdrop-filter:none] [filter:none]">
+          <div className="flex items-center justify-between"><Link to="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 font-display text-lg font-bold"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-hero text-primary-foreground"><Zap className="h-5 w-5" /></span><span>Myfixly</span></Link><Button variant="ghost" size="icon" onClick={() => setMenuOpen(false)} aria-label="Close navigation menu"><X className="h-5 w-5" /></Button></div>
+          <nav className="mt-7 space-y-1" aria-label="Mobile navigation">{navigation.map((item) => { const Icon = item.icon; return <Link key={item.label} to={item.to} onClick={() => setMenuOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"><Icon className="h-5 w-5 text-primary" />{item.label}</Link>; })}{user && <button type="button" onClick={() => void signOut()} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"><LogOut className="h-5 w-5 text-primary" />Sign Out</button>}</nav>
+        </aside>
+      </div>, document.body)}
+  </header>;
 }

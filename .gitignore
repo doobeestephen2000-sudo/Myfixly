@@ -58,3 +58,4 @@ pnpm-debug.log*
 
 # Test coverage
 coverage/
+.gradle-cache/

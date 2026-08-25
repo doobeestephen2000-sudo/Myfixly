@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy Policy — MyFixly" }, { name: "description", content: "How MyFixly handles your data." }] }),
+  head: () => ({ meta: [{ title: "Privacy Policy — Myfixly" }, { name: "description", content: "How Myfixly handles your data." }] }),
   component: () => (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />

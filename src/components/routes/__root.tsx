@@ -55,10 +55,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "MyFixly — Find verified generator mechanics in Nigeria" },
+      { title: "Myfixly — Find verified generator mechanics in Nigeria" },
       { name: "description", content: "The trusted marketplace to find and hire verified generator mechanics for repair, installation, maintenance, and servicing across Nigeria." },
-      { name: "author", content: "MyFixly" },
-      { property: "og:title", content: "MyFixly — Verified generator mechanics near you" },
+      { name: "author", content: "Myfixly" },
+      { property: "og:title", content: "Myfixly — Verified generator mechanics near you" },
       { property: "og:description", content: "Find, contact, and hire trusted generator mechanics in your city. Repair, servicing, installation and maintenance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

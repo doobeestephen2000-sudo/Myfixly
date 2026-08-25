@@ -10,10 +10,7 @@ export function SiteFooter() {
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-hero text-primary-foreground">
               <Zap className="h-5 w-5" />
             </span>
-            <span>
-              <span className="text-primary">My</span>
-              <span className="text-foreground">Fixly</span>
-            </span>
+            <span className="text-foreground">Myfixly</span>
           </Link>
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             The trusted marketplace connecting Nigerians with verified artisans.
@@ -33,7 +30,7 @@ export function SiteFooter() {
         <div>
           <h4 className="mb-3 text-sm font-semibold">For artisans</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><Link to="/auth" search={{ mode: "signup" }} className="hover:text-primary">Join MyFixly</Link></li>
+            <li><Link to="/auth" search={{ mode: "signup" }} className="hover:text-primary">Join Myfixly</Link></li>
             <li><Link to="/auth" className="hover:text-primary">Sign in</Link></li>
           </ul>
         </div>
@@ -47,7 +44,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-border/60 py-4 text-center text-xs text-muted-foreground sm:py-6">
-        &copy; {new Date().getFullYear()} MyFixly. Made for Nigeria.
+        &copy; {new Date().getFullYear()} Myfixly. Made for Nigeria.
       </div>
     </footer>
   );

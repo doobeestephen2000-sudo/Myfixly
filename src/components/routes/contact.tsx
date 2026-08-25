@@ -13,8 +13,8 @@ import { whatsappLink } from "@/lib/whatsapp";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact us — MyFixly" },
-      { name: "description", content: "Get in touch with the MyFixly team." },
+      { title: "Contact us — Myfixly" },
+      { name: "description", content: "Get in touch with the Myfixly team." },
     ],
   }),
   component: Contact,
@@ -28,7 +28,7 @@ function Contact() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) return toast.error("Please fill all fields.");
-    const url = whatsappLink(SUPPORT_WHATSAPP, `Hi MyFixly — ${form.name} (${form.email})\n\n${form.message}`);
+    const url = whatsappLink(SUPPORT_WHATSAPP, `Hi Myfixly — ${form.name} (${form.email})\n\n${form.message}`);
     if (url) window.open(url, "_blank");
     toast.success("Opening WhatsApp…");
   }
@@ -57,7 +57,7 @@ function Contact() {
             <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
               <Mail className="h-5 w-5 text-primary" />
               <h3 className="mt-2 font-display text-lg font-bold">Email</h3>
-              <a className="text-sm text-muted-foreground hover:text-primary" href="mailto:hello@fixly.ng">hello@fixly.ng</a>
+              <a className="text-sm text-muted-foreground hover:text-primary" href="mailto:hello@myfixly.ng">hello@myfixly.ng</a>
             </div>
           </aside>
         </div>

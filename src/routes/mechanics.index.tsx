@@ -22,7 +22,7 @@ export const Route = createFileRoute("/mechanics/")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Find Skilled Artisans & Mechanics — MyFixly" },
+      { title: "Find Skilled Artisans & Mechanics — Myfixly" },
       { name: "description", content: "Search verified plumbers, electricians, generator mechanics, carpenters and other skilled artisans across Nigeria." },
       { property: "og:title", content: "Find verified artisans in Nigeria" },
       { property: "og:description", content: "Browse verified profiles, reviews and contact skilled pros directly on WhatsApp." },

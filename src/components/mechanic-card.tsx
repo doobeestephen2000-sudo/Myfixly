@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Star, ShieldCheck, Zap, Phone } from "lucide-react";
+import { MapPin, Star, ShieldCheck, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { tradeLabel } from "@/lib/constants";
 import type { Database } from "@/integrations/supabase/types";
@@ -59,11 +59,6 @@ export function MechanicCard({ m }: { m: MechanicCardData }) {
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <MapPin className="h-3.5 w-3.5" />
           <span className="truncate">{m.city}, {m.state}</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Phone className="h-3.5 w-3.5" />
-          <span className="truncate">{m.phone}</span>
         </div>
 
         <div className="flex flex-wrap gap-1.5">

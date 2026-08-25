@@ -58,28 +58,55 @@ export type Database = {
       }
       inquiries: {
         Row: {
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_type: string | null
           created_at: string
+          customer_id: string | null
+          customer_latitude: number | null
+          customer_longitude: number | null
+          declined_mechanic_ids: string[]
           customer_name: string
           customer_phone: string | null
           id: string
           mechanic_id: string
           message: string
+          requested_trade: string | null
+          status: string
         }
         Insert: {
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_type?: string | null
           created_at?: string
+          customer_id?: string | null
+          customer_latitude?: number | null
+          customer_longitude?: number | null
+          declined_mechanic_ids?: string[]
           customer_name: string
           customer_phone?: string | null
           id?: string
           mechanic_id: string
           message: string
+          requested_trade?: string | null
+          status?: string
         }
         Update: {
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_type?: string | null
           created_at?: string
+          customer_id?: string | null
+          customer_latitude?: number | null
+          customer_longitude?: number | null
+          declined_mechanic_ids?: string[]
           customer_name?: string
           customer_phone?: string | null
           id?: string
           mechanic_id?: string
           message?: string
+          requested_trade?: string | null
+          status?: string
         }
         Relationships: [
           {
@@ -261,7 +288,9 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
+          gender: string | null
           id: string
+          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -269,7 +298,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          gender?: string | null
           id: string
+          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -277,7 +308,9 @@ export type Database = {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          gender?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -346,9 +379,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_service_request: {
+        Args: { _request_id: string }
+        Returns: unknown
+      }
+      admin_set_mechanic_status: {
+        Args: { _mechanic_id: string; _status: Database["public"]["Enums"]["mechanic_status"] }
+        Returns: unknown
+      }
+      cancel_own_service_request: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
+      complete_service_request: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
+      decline_service_request: {
+        Args: { _request_id: string }
+        Returns: string
+      }
+      get_admin_mechanics: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown[]
+      }
       get_mechanic_id_document: {
         Args: { _mechanic_id: string }
         Returns: string
+      }
+      get_my_mechanic: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown[]
       }
       has_role: {
         Args: {

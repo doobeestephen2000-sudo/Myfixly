@@ -6,21 +6,19 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const bootstrapAdminAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ email: z.string().email().optional() }).parse(data))
-  .handler(async ({ data, context }) => {
+  .inputValidator(() => z.object({}).parse({}))
+  .handler(async ({ context }) => {
     const signedInEmail = typeof context.claims?.email === "string" ? String(context.claims.email).trim().toLowerCase() : "";
-    const providedEmail = typeof data.email === "string" ? data.email.trim().toLowerCase() : signedInEmail;
     const allowedEmails = (process.env.ADMIN_EMAILS ?? process.env.ADMIN_EMAIL ?? "")
       .split(",")
       .map((value) => value.trim().toLowerCase())
       .filter(Boolean);
 
-    if (allowedEmails.length > 0 && !allowedEmails.includes(providedEmail)) {
-      throw new Error("This email is not allowed to bootstrap admin access.");
+    if (!allowedEmails.length) {
+      throw new Error("Admin bootstrap is not configured.");
     }
-
-    if (!providedEmail) {
-      throw new Error("No email was supplied for admin bootstrap.");
+    if (!signedInEmail || !allowedEmails.includes(signedInEmail)) {
+      throw new Error("This email is not allowed to bootstrap admin access.");
     }
 
     const { error } = await supabaseAdmin
@@ -31,5 +29,5 @@ export const bootstrapAdminAccess = createServerFn({ method: "POST" })
       throw new Error(`Unable to create admin role: ${error.message}`);
     }
 
-    return { success: true, email: providedEmail };
+    return { success: true, email: signedInEmail };
   });

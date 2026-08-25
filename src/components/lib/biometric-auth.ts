@@ -148,7 +148,7 @@ export const biometricAuth = {
   async authenticate(): Promise<BiometricAuthenticationResult> {
     try {
       await BiometricAuth.authenticate({
-        reason: "Verify your identity to sign in to MyFixly",
+        reason: "Verify your identity to sign in to Myfixly",
         cancelTitle: "Use password",
         allowDeviceCredential: false,
         iosFallbackTitle: "Use password",

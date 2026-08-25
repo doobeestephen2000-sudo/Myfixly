@@ -48,7 +48,7 @@ export const Route = createFileRoute("/mechanics/$id")({
   },
   head: ({ loaderData, params }) => ({
     meta: [
-      { title: `Generator mechanic in Nigeria — MyFixly` },
+      { title: `Generator mechanic in Nigeria — Myfixly` },
       { name: "description", content: `View profile, ratings and contact this generator mechanic on WhatsApp.` },
       { property: "og:title", content: `Generator mechanic profile` },
       { property: "og:description", content: `Contact this verified generator mechanic directly.` },
@@ -135,7 +135,7 @@ function MechanicProfile() {
         </div>
         <div className="grid gap-2 border-t border-border p-4 sm:grid-cols-4 sm:p-6">
           <Button asChild size="lg" className="shadow-elegant">
-            <a href={whatsappLink(m.whatsapp, `Hi ${m.full_name}, I found you on MyFixly. I need help with my generator.`)} target="_blank" rel="noreferrer">
+            <a href={whatsappLink(m.whatsapp, `Hi ${m.full_name}, I found you on Myfixly. I need help with my generator.`)} target="_blank" rel="noreferrer">
               <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
             </a>
           </Button>

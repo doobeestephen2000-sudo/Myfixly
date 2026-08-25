@@ -1,1 +1,6 @@
 project_id = "fjwoyiaxbipgibenwvbo"
+
+# Password login begins before a Supabase session exists. The function applies
+# its own credential verification and deliberately returns generic failures.
+[functions.phone-password-login]
+verify_jwt = false

@@ -18,8 +18,8 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in — MyFixly" },
-      { name: "description", content: "Sign in to MyFixly." },
+      { title: "Sign in — Myfixly" },
+      { name: "description", content: "Sign in to Myfixly." },
     ],
   }),
   component: Auth,
@@ -117,7 +117,7 @@ function Auth() {
   }
 
   const title =
-    mode === "signup" ? "Join MyFixly" : mode === "forgot" ? "Reset your password" : mode === "reset" ? "Set a new password" : "Welcome back";
+    mode === "signup" ? "Join Myfixly" : mode === "forgot" ? "Reset your password" : mode === "reset" ? "Set a new password" : "Welcome back";
 
   const subtitle =
     mode === "signup"

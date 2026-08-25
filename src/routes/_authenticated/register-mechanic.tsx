@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Zap, CreditCard, Loader2 } from "lucide-react";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { NIGERIA_STATES, SERVICES, TRADES, formatNaira } from "@/lib/constants";
+import { NIGERIA_LGAS, NIGERIA_STATES, SERVICES, TRADES, formatNaira, isValidNigeriaLga } from "@/lib/constants";
 import { verifyPayment } from "@/lib/payments.functions";
 
 declare global {
@@ -33,34 +33,41 @@ export const Route = createFileRoute("/_authenticated/register-mechanic")({
   loader: async () => {
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) throw redirect({ to: "/auth" });
-    const { data: existing } = await supabase.from("mechanics").select("*").eq("user_id", user.user.id).maybeSingle();
-    return { existing, user: user.user };
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.user.id);
+    if (!(roles ?? []).some((entry) => entry.role === "artisan" || entry.role === "mechanic")) {
+      throw redirect({ to: "/dashboard" });
+    }
+    const { data: profile } = await supabase.from("profiles").select("full_name,email,phone").eq("id", user.user.id).maybeSingle();
+    const { data: ownMechanics } = await supabase.rpc("get_my_mechanic" as never);
+    const existing = (ownMechanics ?? [])[0] as typeof import("@/integrations/supabase/types").Database["public"]["Tables"]["mechanics"]["Row"] | undefined;
+    if (existing?.paid && existing.status === "approved" && existing.verified) {
+      throw redirect({ to: "/dashboard" });
+    }
+    return { existing, profile, user: user.user };
   },
   component: RegisterMechanic,
 });
 
 function RegisterMechanic() {
-  const { existing, user } = Route.useLoaderData();
-  const navigate = useNavigate();
-
+  const { existing, profile, user } = Route.useLoaderData();
   const [step, setStep] = useState<1 | 2 | 3>(existing ? (existing.paid ? 3 : 2) : 1);
   const [saving, setSaving] = useState(false);
   const [paying, setPaying] = useState(false);
 
   const [f, setF] = useState({
-    full_name: existing?.full_name ?? "",
+    full_name: existing?.full_name ?? profile?.full_name ?? "",
     business_name: existing?.business_name ?? "",
-    trade: ((existing as unknown as { trade?: string })?.trade) ?? "generator_mechanic",
-    phone: existing?.phone ?? "",
+    trade: ((existing as unknown as { trade?: string })?.trade) ?? "",
+    phone: existing?.phone ?? profile?.phone ?? "",
     whatsapp: existing?.whatsapp ?? "",
     email: existing?.email ?? user.email ?? "",
     state: existing?.state ?? "",
     city: existing?.city ?? "",
     area: existing?.area ?? "",
     address: existing?.address ?? "",
-    latitude: existing?.latitude ?? null as number | null,
-    longitude: existing?.longitude ?? null as number | null,
-    years_experience: existing?.years_experience ?? 0,
+    // Keep the field empty for a new application. The database default is only
+    // used when an artisan deliberately leaves this optional field blank.
+    years_experience: existing?.years_experience?.toString() ?? "",
     services: (existing?.services ?? []) as string[],
     bio: existing?.bio ?? "",
     profile_picture_url: existing?.profile_picture_url ?? "",
@@ -81,65 +88,68 @@ function RegisterMechanic() {
   }, []);
 
   const allowedProfileTypes = ["image/jpeg", "image/png"];
-  const allowedIdTypes = ["application/pdf"];
+  const allowedIdTypes = ["application/pdf", "image/jpeg", "image/png"];
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
-  function validateUpload(file: File | undefined, allowedTypes: string[]) {
+  function validateUpload(file: File | undefined, allowedTypes: string[], label: string) {
     if (!file) return false;
 
-    const isAllowedMimeType = allowedTypes.includes(file.type);
-    const isAllowedExtension = /\.(jpe?g|png|pdf)$/i.test(file.name);
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const expectedExtension = file.type === "application/pdf"
+      ? extension === "pdf"
+      : file.type === "image/jpeg"
+        ? extension === "jpg" || extension === "jpeg"
+        : file.type === "image/png" && extension === "png";
 
-    if (!isAllowedMimeType && !isAllowedExtension) {
-      toast.error("Only JPEG, PNG, and PDF files are allowed.");
+    if (!allowedTypes.includes(file.type) || !expectedExtension) {
+      toast.error(`${label} must be a ${allowedTypes.includes("application/pdf") ? "PDF, JPG/JPEG, or PNG" : "JPG/JPEG or PNG"} file.`);
+      return false;
+    }
+
+    if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) {
+      toast.error(`${label} must be smaller than 5 MB.`);
       return false;
     }
 
     return true;
   }
 
-  const STORAGE_BUCKET_ALIASES = {
-    profile: ["artisan-profiles", "mechanic-profiles"],
-    id: ["artisan-ids", "mechanic-ids"],
-  } as const;
-
-  async function resolveBucket(type: keyof typeof STORAGE_BUCKET_ALIASES): Promise<string> {
-    const candidates = STORAGE_BUCKET_ALIASES[type];
-
-    for (const candidate of candidates) {
-      const { data, error } = await supabase.storage.getBucket(candidate);
-      if (!error && data) return candidate;
-    }
-
-    return candidates[0];
-  }
-
-  async function uploadFile(bucket: string, file: File): Promise<string | null> {
-    const bucketType = bucket === "mechanic-profiles" || bucket === "artisan-profiles" ? "profile" : "id";
-    const activeBucket = await resolveBucket(bucketType);
+  async function uploadFile(bucket: "mechanic-profiles" | "mechanic-ids", file: File): Promise<string | null> {
     const path = `${user.id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
-    const { error } = await supabase.storage.from(activeBucket).upload(path, file, { upsert: true });
-    if (error) { toast.error(error.message); return null; }
-    if (bucketType === "profile") {
-      const { data } = supabase.storage.from(activeBucket).getPublicUrl(path);
-      return data.publicUrl;
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+      upsert: false,
+      contentType: file.type,
+    });
+    if (error || !data?.path) {
+      toast.error(`Unable to upload ${bucket === "mechanic-ids" ? "government ID" : "profile photo"}: ${error?.message ?? "storage did not return a file path"}`);
+      return null;
     }
-    const { data: signed } = await supabase.storage.from(activeBucket).createSignedUrl(path, 60 * 60 * 24 * 365);
-    return signed?.signedUrl ?? path;
+    if (bucket === "mechanic-ids") return data.path;
+
+    const { data: publicUrl } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    if (!publicUrl.publicUrl) {
+      toast.error("Profile photo uploaded, but its display URL could not be created. Please try again.");
+      return null;
+    }
+    return publicUrl.publicUrl;
   }
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
-    if (!f.full_name || !f.phone || !f.whatsapp || !f.state || !f.city || !f.address) {
+    if (!f.full_name || !f.phone || !f.state || !f.city || !f.address || !isValidNigeriaLga(f.state, f.city)) {
       return toast.error("Please fill required fields.");
     }
-    if (!f.profile_picture_url) {
-      return toast.error("A profile picture is required before you can submit your artisan registration.");
-    }
+    if (!f.trade) return toast.error("Please select your trade.");
     if (!f.id_document_url) {
       return toast.error("Government ID is required before you can submit your artisan registration.");
     }
     setSaving(true);
-    const payload = { ...f, user_id: user.id } as unknown as Record<string, unknown>;
+    const { years_experience, ...profileFields } = f;
+    const payload = {
+      ...profileFields,
+      user_id: user.id,
+      ...(years_experience === "" ? {} : { years_experience: Number(years_experience) }),
+    } as unknown as Record<string, unknown>;
     const { error } = existing
       ? await supabase.from("mechanics").update(payload as never).eq("user_id", user.id)
       : await supabase.from("mechanics").insert(payload as never);
@@ -152,9 +162,9 @@ function RegisterMechanic() {
   async function startPayment() {
     if (!settings) return toast.error("Fee not configured yet.");
     if (!publicKey) return toast.error("Payment isn't set up yet. Please contact admin.");
-    if (!window.PaystackPop) return toast.error("Payment script not loaded — refresh the page.");
+    if (!window.PaystackPop) return toast.error("Payment script not loaded â€” refresh the page.");
     setPaying(true);
-    const reference = `GC-${user.id.slice(0, 8)}-${Date.now()}`;
+    const reference = `MYFIXLY-${user.id.slice(0, 8)}-${Date.now()}`;
     // record pending payment
     await supabase.from("payments").insert({
       user_id: user.id, reference, amount: settings.amount, currency: settings.currency, provider: "paystack", status: "pending",
@@ -209,20 +219,21 @@ function RegisterMechanic() {
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <Field label="Your trade *" className="sm:col-span-2">
                 <select value={f.trade} onChange={(e) => setF({ ...f, trade: e.target.value })} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="" disabled>Select Trade</option>
                   {TRADES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
                 </select>
               </Field>
               <Field label="Full name *"><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} required /></Field>
               <Field label="Business name (optional)"><Input value={f.business_name} onChange={(e) => setF({ ...f, business_name: e.target.value })} placeholder="Optional" /></Field>
               <Field label="Phone *"><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} required /></Field>
-              <Field label="WhatsApp number *"><Input value={f.whatsapp} onChange={(e) => setF({ ...f, whatsapp: e.target.value })} required /></Field>
+              <Field label="Additional contact (optional)"><Input value={f.whatsapp} onChange={(e) => setF({ ...f, whatsapp: e.target.value })} /></Field>
               <Field label="Email *" className="sm:col-span-2"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} required /></Field>
-              <Field label="Profile picture *" className="sm:col-span-2">
+              <Field label="Profile picture (optional)" className="sm:col-span-2">
                 <div className="flex items-center gap-3">
                   {f.profile_picture_url && <img src={f.profile_picture_url} alt="" className="h-16 w-16 rounded-xl object-cover" />}
                   <Input
                     type="file"
-                    accept="image/jpeg,image/png"
+                    accept="image/jpeg,.jpg,.jpeg,.png"
                     onClick={(e) => {
                       const input = e.currentTarget as HTMLInputElement;
                       input.value = "";
@@ -231,7 +242,7 @@ function RegisterMechanic() {
                       const input = e.target as HTMLInputElement;
                       const file = input.files?.[0];
                       if (!file) return;
-                      if (!validateUpload(file, allowedProfileTypes)) {
+                      if (!validateUpload(file, allowedProfileTypes, "Profile photo")) {
                         input.value = "";
                         return;
                       }
@@ -241,6 +252,7 @@ function RegisterMechanic() {
                       input.value = "";
                     }}
                   />
+                  {f.profile_picture_url && <Button type="button" variant="outline" size="sm" onClick={() => setF((prev) => ({ ...prev, profile_picture_url: "" }))}>Remove</Button>}
                 </div>
               </Field>
             </CardContent>
@@ -250,30 +262,26 @@ function RegisterMechanic() {
             <CardHeader><CardTitle>Location</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <Field label="State *">
-                <select value={f.state} onChange={(e) => setF({ ...f, state: e.target.value })} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <select value={f.state} onChange={(e) => setF({ ...f, state: e.target.value, city: "" })} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
                   <option value="">Select state</option>
                   {NIGERIA_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
-              <Field label="City *"><Input value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} required /></Field>
+              <Field label="LGA">
+                <select value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} disabled={!f.state} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50">
+                  <option value="">{f.state ? "Select LGA" : "Select a state first"}</option>
+                  {(NIGERIA_LGAS[f.state] ?? []).map((lga) => <option key={lga} value={lga}>{lga}</option>)}
+                </select>
+              </Field>
               <Field label="Area / Neighborhood"><Input value={f.area} onChange={(e) => setF({ ...f, area: e.target.value })} /></Field>
               <Field label="Full address *" className="sm:col-span-2"><Textarea value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} required rows={2} /></Field>
-              <Field label="GPS Location" className="sm:col-span-2">
-                <Button type="button" variant="outline" onClick={() => {
-                  if (!navigator.geolocation) return toast.error("Geolocation not supported.");
-                  navigator.geolocation.getCurrentPosition(
-                    (pos) => { setF({ ...f, latitude: pos.coords.latitude, longitude: pos.coords.longitude }); toast.success("Location captured"); },
-                    () => toast.error("Could not get location.")
-                  );
-                }}>{f.latitude ? `📍 ${f.latitude.toFixed(4)}, ${f.longitude?.toFixed(4)}` : "Use my current location"}</Button>
-              </Field>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader><CardTitle>Experience & services</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <Field label="Years of experience"><Input type="number" min={0} max={70} value={f.years_experience} onChange={(e) => setF({ ...f, years_experience: parseInt(e.target.value || "0") })} /></Field>
+              <Field label="Years of experience"><Input type="number" min={0} max={70} step={1} value={f.years_experience} onChange={(e) => setF({ ...f, years_experience: e.target.value })} /></Field>
               <div>
                 <Label>Services offered</Label>
                 <div className="mt-2 grid grid-cols-2 gap-2">
@@ -286,10 +294,10 @@ function RegisterMechanic() {
                 </div>
               </div>
               <Field label="Short bio"><Textarea value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} rows={4} maxLength={600} placeholder="Tell customers about your work, specialties, and what makes you great." /></Field>
-              <Field label="Government ID required (for verification) * PDF only">
+              <Field label="Government ID required (for verification) *">
                 <Input
                   type="file"
-                  accept="application/pdf"
+                  accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
                   onClick={(e) => {
                     const input = e.currentTarget as HTMLInputElement;
                     input.value = "";
@@ -298,7 +306,7 @@ function RegisterMechanic() {
                     const input = e.target as HTMLInputElement;
                     const file = input.files?.[0];
                     if (!file) return;
-                    if (!validateUpload(file, allowedIdTypes)) {
+                    if (!validateUpload(file, allowedIdTypes, "Government ID")) {
                       input.value = "";
                       return;
                     }
@@ -311,7 +319,7 @@ function RegisterMechanic() {
                     input.value = "";
                   }}
                 />
-                {f.id_document_url && <p className="mt-1 text-xs text-success">Government ID uploaded ✓</p>}
+                {f.id_document_url && <p className="mt-1 text-xs text-success">Government ID uploaded âœ“</p>}
               </Field>
             </CardContent>
           </Card>
@@ -332,20 +340,20 @@ function RegisterMechanic() {
           <CardContent className="space-y-6">
             <div className="rounded-2xl bg-gradient-hero p-6 text-primary-foreground">
               <p className="text-sm opacity-90">Amount due</p>
-              <p className="font-display text-4xl font-bold">{settings ? formatNaira(settings.amount) : "—"}</p>
-              <p className="mt-1 text-xs opacity-80">One-time payment · Secure checkout via Paystack</p>
+              <p className="font-display text-4xl font-bold">{settings ? formatNaira(settings.amount) : "â€”"}</p>
+              <p className="mt-1 text-xs opacity-80">One-time payment Â· Secure checkout via Paystack</p>
             </div>
             <ul className="space-y-2 text-sm">
-              <li className="flex gap-2">✅ Get listed for thousands of customers</li>
-              <li className="flex gap-2">✅ Verified badge after admin review</li>
-              <li className="flex gap-2">✅ Direct WhatsApp & call inquiries</li>
-              <li className="flex gap-2">✅ Ratings, reviews & gallery</li>
+              <li className="flex gap-2">âœ… Get listed for thousands of customers</li>
+              <li className="flex gap-2">âœ… Verified badge after admin review</li>
+              <li className="flex gap-2">âœ… Direct service requests and calls after assignment</li>
+              <li className="flex gap-2">âœ… Ratings, reviews & gallery</li>
             </ul>
             <Button size="lg" className="w-full shadow-elegant" onClick={startPayment} disabled={paying || !settings}>
               {paying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
               Pay {settings ? formatNaira(settings.amount) : ""} with Paystack
             </Button>
-            <Button variant="ghost" className="w-full" onClick={() => setStep(1)}>← Edit profile</Button>
+            <Button variant="ghost" className="w-full" onClick={() => setStep(1)}>â† Edit profile</Button>
           </CardContent>
         </Card>
       )}
@@ -360,7 +368,9 @@ function RegisterMechanic() {
             <CardDescription>Your profile has been submitted for admin review. You'll be notified once approved.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" onClick={() => navigate({ to: "/dashboard" })}>Go to dashboard →</Button>
+            <p className="rounded-xl bg-muted p-3 text-center text-sm text-muted-foreground">
+              Your application is pending approval. The artisan dashboard will become available after an administrator approves it.
+            </p>
           </CardContent>
         </Card>
       )}

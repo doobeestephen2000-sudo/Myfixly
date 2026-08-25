@@ -39,7 +39,7 @@ function Admin() {
 
   async function refresh() {
     const [mRes, pRes, sRes] = await Promise.all([
-      supabase.from("mechanics").select("*").order("created_at", { ascending: false }),
+      supabase.rpc("get_admin_mechanics" as never),
       supabase.from("payments").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("app_settings").select("key,value"),
     ]);
@@ -59,7 +59,7 @@ function Admin() {
   useEffect(() => { refresh(); }, []);
 
   async function setStatus(id: string, status: Mechanic["status"], extra: Partial<Mechanic> = {}) {
-    const { error } = await supabase.from("mechanics").update({ status, ...extra }).eq("id", id);
+    const { error } = await supabase.rpc("admin_set_mechanic_status" as never, { _mechanic_id: id, _status: status } as never);
     if (error) return toast.error(error.message);
     toast.success("Updated");
     refresh();

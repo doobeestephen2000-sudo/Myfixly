@@ -115,7 +115,7 @@ function Home() {
               Find a trusted mechanic, plumber or artisan <span className="text-primary">near you</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-              Generator mechanics, plumbers, electricians, carpenters, AC techs and more — verified profiles, real reviews, one tap to WhatsApp.
+              Generator mechanics, plumbers, electricians, carpenters, AC techs and more — verified profiles, real reviews, and secure service requests.
             </p>
 
             <form
@@ -243,7 +243,7 @@ function Home() {
           </div>
           <h2 className="font-display text-3xl font-bold sm:text-4xl">Are you a skilled artisan?</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-primary-foreground/90 sm:text-base">
-            Whether you're a mechanic, plumber, electrician or any skilled pro — join MyFixly and reach thousands of customers.
+            Whether you're a mechanic, plumber, electrician or any skilled pro — join Myfixly and reach thousands of customers.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg" variant="secondary" className="shadow-elegant">

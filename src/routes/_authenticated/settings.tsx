@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useState } from "react";
-import { Fingerprint, ShieldCheck, Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Fingerprint, ShieldCheck, Moon, Sun, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -24,6 +24,8 @@ import {
   getStoredTheme,
   setTheme,
 } from "@/lib/theme";
+import { profileAvatar } from "@/lib/avatar";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   loader: async () => {
@@ -47,12 +49,22 @@ function SettingsPage() {
   );
 
   const [saving, setSaving] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const gender = user.user_metadata?.gender as string | undefined;
 
   const [theme, setThemePreference] = useState<ThemePreference>(() => {
     const storedTheme = getStoredTheme();
 
     return storedTheme === "dark" ? "dark" : "light";
   });
+
+  useEffect(() => {
+    const path = typeof user.user_metadata?.avatar_path === "string" ? user.user_metadata.avatar_path : null;
+    if (!path) return;
+    void supabase.storage.from("profile-avatars").createSignedUrl(path, 60 * 60).then(({ data }) => {
+      if (data?.signedUrl) setAvatarUrl(data.signedUrl);
+    });
+  }, [user.user_metadata?.avatar_path]);
 
   function selectTheme(preference: "light" | "dark") {
     setTheme(preference);
@@ -139,6 +151,28 @@ function SettingsPage() {
     }
   }
 
+  async function updateAvatar(file?: File) {
+    try {
+      let nextPath: string | null = null;
+      let nextUrl: string | null = null;
+      if (file) {
+        if (!file.type.startsWith("image/")) throw new Error("Please choose an image file.");
+        const path = `${user.id}/avatar-${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+        const { error } = await supabase.storage.from("profile-avatars").upload(path, file, { upsert: false });
+        if (error) throw error;
+        const { data: signed, error: signedError } = await supabase.storage.from("profile-avatars").createSignedUrl(path, 60 * 60);
+        if (signedError || !signed?.signedUrl) throw signedError ?? new Error("Unable to display the uploaded profile picture.");
+        nextPath = path;
+        nextUrl = signed.signedUrl;
+      }
+      const { error } = await supabase.from("profiles").update({ avatar_url: nextPath }).eq("id", user.id);
+      if (error) throw error;
+      setAvatarUrl(nextUrl);
+      await supabase.auth.updateUser({ data: { avatar_path: nextPath } });
+      toast.success(nextPath ? "Profile picture updated." : "Profile picture removed. Your default avatar is now shown.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update profile picture."); }
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-5">
@@ -187,6 +221,8 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card className="mt-5"><CardHeader><CardTitle>Profile picture</CardTitle><CardDescription>Optional. A gender-based avatar is used when no photo is set.</CardDescription></CardHeader><CardContent className="flex items-center gap-4"><img src={profileAvatar({ avatar_url: avatarUrl, gender })} alt="Your profile" className="h-16 w-16 rounded-full object-cover" /><div className="flex flex-wrap gap-2"><label className="inline-flex cursor-pointer items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"><Upload className="mr-2 h-4 w-4" />Upload<Input type="file" accept="image/*" className="hidden" onChange={(e) => void updateAvatar(e.target.files?.[0])} /></label>{avatarUrl && <Button type="button" variant="outline" onClick={() => void updateAvatar()}><Trash2 className="mr-2 h-4 w-4" />Remove</Button>}</div></CardContent></Card>
+
       {/* Appearance Card */}
       <Card className="mt-5">
         <CardHeader>
@@ -195,7 +231,7 @@ function SettingsPage() {
           </CardTitle>
 
           <CardDescription className="dark:text-slate-300">
-            Choose how MyFixly looks on this device.
+            Choose how Myfixly looks on this device.
           </CardDescription>
         </CardHeader>
 
@@ -213,7 +249,7 @@ function SettingsPage() {
               aria-pressed={theme === "light"}
             >
               <Sun className="h-4 w-4" />
-              Light
+              Light Mode
             </Button>
 
             <Button
@@ -224,7 +260,7 @@ function SettingsPage() {
               aria-pressed={theme === "dark"}
             >
               <Moon className="h-4 w-4" />
-              Dark
+              Dark Mode
             </Button>
           </div>
         </CardContent>

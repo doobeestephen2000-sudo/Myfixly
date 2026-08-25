@@ -1,3 +1,5 @@
+import nigeriaLgas from "./nigeria-lgas.json";
+
 export const NIGERIA_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
   "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT - Abuja", "Gombe",
@@ -5,6 +7,14 @@ export const NIGERIA_STATES = [
   "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto",
   "Taraba", "Yobe", "Zamfara",
 ];
+
+// Complete Nigerian administrative divisions (36 states, FCT, 774 LGAs).
+// Registration stores the selected LGA in the existing mechanics.city field.
+export const NIGERIA_LGAS = nigeriaLgas as Record<string, string[]>;
+
+export function isValidNigeriaLga(state: string, lga: string): boolean {
+  return NIGERIA_LGAS[state]?.includes(lga) ?? false;
+}
 
 export const TRADES = [
   { key: "generator_mechanic", label: "Generator Mechanic", icon: "zap" },
@@ -57,4 +67,4 @@ export function formatNaira(amount: number): string {
 // available to owners/admins via the get_mechanic_id_document RPC or the
 // authenticated dashboard views.
 export const MECHANIC_PUBLIC_COLUMNS =
-  "id,user_id,full_name,business_name,profile_picture_url,phone,whatsapp,state,city,area,address,latitude,longitude,years_experience,brands,services,bio,status,availability,verified,paid,featured,rating_avg,rating_count,trade,created_at,updated_at";
+  "id,user_id,full_name,business_name,profile_picture_url,state,city,area,years_experience,brands,services,bio,status,availability,verified,paid,featured,rating_avg,rating_count,trade,created_at,updated_at";

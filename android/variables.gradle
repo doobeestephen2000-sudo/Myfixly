@@ -1,4 +1,10 @@
 ext {
+    // Keep every Capacitor Android plugin on the same Kotlin toolchain. The
+    // geolocation plugin is Kotlin 2.2/Java 21 and otherwise falls back to an
+    // isolated plugin version that can conflict with other Capacitor modules.
+    kotlin_version = '2.2.20'
+    kotlinxCoroutinesVersion = '1.10.2'
+    playServicesLocationVersion = '21.3.0'
     minSdkVersion = 24
     compileSdkVersion = 36
     targetSdkVersion = 36

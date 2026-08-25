@@ -6,9 +6,9 @@ import { Zap, Users, ShieldCheck, MapPin } from "lucide-react";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About — MyFixly" },
-      { name: "description", content: "MyFixly links generator owners with verified professional mechanics across Nigeria." },
-      { property: "og:title", content: "About MyFixly" },
+      { title: "About — Myfixly" },
+      { name: "description", content: "Myfixly links generator owners with verified professional mechanics across Nigeria." },
+      { property: "og:title", content: "About Myfixly" },
       { property: "og:description", content: "Nigeria's marketplace for verified generator mechanics." },
     ],
   }),
@@ -22,7 +22,7 @@ function About() {
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="font-display text-4xl font-bold sm:text-5xl">Power without the panic.</h1>
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-          MyFixly is Nigeria's fastest way to find a trusted generator mechanic. We verify professionals, gather real reviews,
+          Myfixly is Nigeria's fastest way to find a trusted generator mechanic. We verify professionals, gather real reviews,
           and connect you directly on WhatsApp — no middlemen, no delays.
         </p>
 

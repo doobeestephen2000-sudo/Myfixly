@@ -1,7 +1,7 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { MessageCircle, Phone, MapPin, Star, ShieldCheck, Calendar, Zap, ArrowLeft, Heart, Send } from "lucide-react";
+import { MapPin, Star, ShieldCheck, Calendar, Zap, ArrowLeft, Heart, Send, Paperclip, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { whatsappLink, telLink, googleMapsLink } from "@/lib/whatsapp";
 import { tradeLabel } from "@/lib/constants";
 
 import { MECHANIC_PUBLIC_COLUMNS } from "@/lib/constants";
@@ -48,8 +47,8 @@ export const Route = createFileRoute("/mechanics/$id")({
   },
   head: ({ loaderData, params }) => ({
     meta: [
-      { title: `Generator mechanic in Nigeria — MyFixly` },
-      { name: "description", content: `View profile, ratings and contact this generator mechanic on WhatsApp.` },
+      { title: `Generator mechanic in Nigeria — Myfixly` },
+      { name: "description", content: `View profile, ratings and request a verified Myfixly artisan.` },
       { property: "og:title", content: `Generator mechanic profile` },
       { property: "og:description", content: `Contact this verified generator mechanic directly.` },
     ],
@@ -133,20 +132,7 @@ function MechanicProfile() {
             </div>
           </div>
         </div>
-        <div className="grid gap-2 border-t border-border p-4 sm:grid-cols-4 sm:p-6">
-          <Button asChild size="lg" className="shadow-elegant">
-            <a href={whatsappLink(m.whatsapp, `Hi ${m.full_name}, I found you on MyFixly. I need help with my generator.`)} target="_blank" rel="noreferrer">
-              <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
-            </a>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <a href={telLink(m.phone)}><Phone className="mr-2 h-4 w-4" /> Call</a>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <a href={googleMapsLink(m.latitude, m.longitude, `${m.address}, ${m.city}, ${m.state}`)} target="_blank" rel="noreferrer">
-              <MapPin className="mr-2 h-4 w-4" /> View on Maps
-            </a>
-          </Button>
+        <div className="flex border-t border-border p-4 sm:p-6">
           <Button size="lg" variant={fav ? "default" : "outline"} onClick={toggleFav}>
             <Heart className={`mr-2 h-4 w-4 ${fav ? "fill-current" : ""}`} /> {fav ? "Saved" : "Save"}
           </Button>
@@ -213,30 +199,87 @@ function MechanicProfile() {
 }
 
 function InquiryForm({ mechanicId }: { mechanicId: string }) {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !message.trim()) return toast.error("Please fill your name and a message.");
+    if (!name.trim() || !message.trim() || !location) return toast.error("Please provide your name, request, and destination location.");
     setLoading(true);
-    const { error } = await supabase.from("inquiries").insert({
-      mechanic_id: mechanicId, customer_name: name.trim(), customer_phone: phone.trim() || null, message: message.trim(),
-    });
-    setLoading(false);
-    if (error) return toast.error("Could not send inquiry. Try again.");
-    toast.success("Inquiry sent!");
-    setName(""); setPhone(""); setMessage("");
+    try {
+      let attachmentPath: string | null = null;
+      let attachmentName: string | null = null;
+      let attachmentType: string | null = null;
+
+      if (attachment) {
+        if (attachment.size > 10 * 1024 * 1024) throw new Error("Attachments must be 10 MB or smaller.");
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) throw new Error("Please sign in before attaching a file.");
+
+        const safeName = attachment.name.replace(/[^\\w.-]/g, "_");
+        attachmentPath = `${userData.user.id}/${mechanicId}/${Date.now()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("inquiry-attachments")
+          .upload(attachmentPath, attachment, { contentType: attachment.type || undefined });
+        if (uploadError) throw uploadError;
+        attachmentName = attachment.name;
+        attachmentType = attachment.type || "application/octet-stream";
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Please sign in before requesting an artisan.");
+      const { data: mechanic, error: mechanicError } = await supabase.from("mechanics").select("trade,availability,status,verified").eq("id", mechanicId).maybeSingle();
+      if (mechanicError) throw mechanicError;
+      if (!mechanic || mechanic.status !== "approved" || !mechanic.verified || mechanic.availability !== "available") throw new Error("This artisan is not currently available. Please choose another artisan.");
+      const { error } = await supabase.from("inquiries").insert({
+        mechanic_id: mechanicId,
+        customer_id: userData.user.id,
+        customer_name: name.trim(),
+        customer_phone: phone.trim() || null,
+        message: message.trim(),
+        attachment_path: attachmentPath,
+        attachment_name: attachmentName,
+        attachment_type: attachmentType,
+        customer_latitude: location.latitude,
+        customer_longitude: location.longitude,
+        requested_trade: mechanic.trade,
+      } as never);
+      if (error) {
+        if (attachmentPath) await supabase.storage.from("inquiry-attachments").remove([attachmentPath]);
+        throw error;
+      }
+
+      toast.success("Request sent. Tracking will begin when the artisan accepts.");
+      setName(""); setPhone(""); setMessage(""); setAttachment(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not send inquiry. Try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <Input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
-      <Input placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} />
-      <Textarea placeholder="Describe what you need help with" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={600} rows={4} required />
-      <Button type="submit" disabled={loading} className="w-full"><Send className="mr-2 h-4 w-4" />{loading ? "Sending..." : "Send inquiry"}</Button>
+    <form onSubmit={submit} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Input aria-label="Your name" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required />
+        <Input aria-label="Phone number" placeholder="Phone number (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} />
+      </div>
+      <Textarea placeholder="Describe the job, issue, or parts you need help with" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={600} rows={4} required />
+      <Button type="button" variant="outline" className="w-full" onClick={() => navigator.geolocation?.getCurrentPosition((p) => { setLocation({ latitude: p.coords.latitude, longitude: p.coords.longitude }); toast.success("Destination location added."); }, () => toast.error("Location is required to track the artisan to you."), { enableHighAccuracy: true })}>
+        <MapPin className="mr-2 h-4 w-4" />{location ? "Destination location added" : "Use my destination location"}
+      </Button>
+      <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-3 py-2.5 transition-colors hover:border-primary/40 hover:bg-primary/5">
+        <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground"><Paperclip className="h-4 w-4 shrink-0 text-primary" />{attachment ? <span className="truncate font-medium text-foreground">{attachment.name}</span> : "Attach a photo or document (optional)"}</span>
+        <span className="shrink-0 text-xs font-medium text-primary">Browse</span>
+        <Input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={(e) => setAttachment(e.target.files?.[0] ?? null)} disabled={loading} />
+      </label>
+      <p className="text-xs text-muted-foreground">Up to 10 MB. File attachments require a signed-in account to keep them private.</p>
+      <Button type="submit" disabled={loading} className="w-full">{loading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}{loading ? "Sending request" : "Send request"}</Button>
     </form>
   );
 }

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy Policy — MyFixly" }, { name: "description", content: "How MyFixly handles your data." }] }),
+  head: () => ({ meta: [{ title: "Privacy Policy — Myfixly" }, { name: "description", content: "How Myfixly handles your data." }] }),
   component: () => (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="font-display text-4xl font-bold">Privacy Policy</h1>
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/privacy")({
           <h3 className="mt-6 font-display text-xl font-bold text-foreground">How we use it</h3>
           <p>To operate the marketplace, verify mechanics, display listings, process payments, and improve the platform.</p>
           <h3 className="mt-6 font-display text-xl font-bold text-foreground">Sharing</h3>
-          <p>Mechanic public profile fields (name, city, brands, services, reviews) are visible to all users. Contact numbers are used for WhatsApp/call deep links you choose to open. IDs remain private and are used only for verification.</p>
+          <p>Artisan public profile fields (name, city, brands, services, and reviews) are visible to all users. Private contact details, full addresses, exact coordinates, identity documents, and customer account avatars are not part of public artisan discovery. IDs remain private and are used only for verification.</p>
           <h3 className="mt-6 font-display text-xl font-bold text-foreground">Your rights</h3>
           <p>You can request access, correction, or deletion of your account data by contacting us.</p>
         </div>

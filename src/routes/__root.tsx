@@ -61,10 +61,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "MyFixly — Find verified generator mechanics in Nigeria" },
+      { title: "Myfixly — Find verified generator mechanics in Nigeria" },
       { name: "description", content: "The trusted marketplace to find and hire verified generator mechanics for repair, installation, maintenance, and servicing across Nigeria." },
-      { name: "author", content: "MyFixly" },
-      { property: "og:title", content: "MyFixly — Verified generator mechanics near you" },
+      { name: "author", content: "Myfixly" },
+      { property: "og:title", content: "Myfixly — Verified generator mechanics near you" },
       { property: "og:description", content: "Find, contact, and hire trusted generator mechanics in your city. Repair, servicing, installation and maintenance." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -113,7 +113,12 @@ function RootComponent() {
     let active = true;
     const fontsReady = typeof document !== "undefined" && document.fonts ? document.fonts.ready : Promise.resolve();
 
-    void Promise.all([supabase.auth.getSession(), fontsReady])
+    // The app shell should always become interactive quickly. Font or auth
+    // restoration can finish in the background instead of holding the splash.
+    void Promise.race([
+      Promise.all([supabase.auth.getSession(), fontsReady]),
+      new Promise<void>((resolve) => window.setTimeout(resolve, 1500)),
+    ])
       .catch(() => undefined)
       .finally(() => {
         requestAnimationFrame(() => {
@@ -174,10 +179,10 @@ function RootComponent() {
 
 function AppBootSplash() {
   return (
-    <div className="flex min-h-[100svh] items-center justify-center bg-background px-6" role="status" aria-label="Loading MyFixly">
+    <div className="flex min-h-[100svh] items-center justify-center bg-background px-6" role="status" aria-label="Loading Myfixly">
       <div className="flex flex-col items-center text-center">
         <div className="grid h-16 w-16 place-items-center rounded-3xl bg-gradient-hero text-primary-foreground shadow-elegant"><Zap className="h-8 w-8" /></div>
-        <p className="mt-4 font-display text-lg font-bold"><span className="text-primary">My</span>Fixly</p>
+        <p className="mt-4 font-display text-lg font-bold text-foreground">Myfixly</p>
         <div className="mt-4 h-1.5 w-24 overflow-hidden rounded-full bg-primary/10"><div className="h-full w-1/2 animate-[loading_1s_ease-in-out_infinite] rounded-full bg-primary" /></div>
       </div>
     </div>
