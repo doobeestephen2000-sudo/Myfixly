@@ -211,6 +211,7 @@ function Dashboard() {
 
 function Welcome({ profile, fallbackName }: { profile: { full_name?: string | null; avatar_url?: string | null; gender?: string | null } | null; fallbackName: string }) {
   const name = profile?.full_name || fallbackName;
+  const firstName = name.trim().split(/\s+/)[0] || name;
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -226,7 +227,7 @@ function Welcome({ profile, fallbackName }: { profile: { full_name?: string | nu
     return () => { active = false; };
   }, [profile?.avatar_url]);
 
-  return <div className="mb-6 flex items-center gap-3"><img src={profileAvatar({ ...profile, avatar_url: avatarUrl })} alt="" className="h-12 w-12 rounded-full object-cover" /><div><h1 className="font-display text-2xl font-bold sm:text-3xl">Welcome, {name} 👋</h1><p className="text-sm text-muted-foreground">Your Myfixly dashboard</p></div></div>;
+  return <div className="mb-6 flex items-center gap-3"><img src={profileAvatar({ ...profile, avatar_url: avatarUrl })} alt="" className="h-12 w-12 rounded-full object-cover" /><div><h1 className="font-display text-2xl font-bold sm:text-3xl">Welcome, {firstName} 👋</h1><p className="text-sm text-muted-foreground">Your Myfixly dashboard</p></div></div>;
 }
 
 function CustomerRequests({ userId }: { userId: string }) {

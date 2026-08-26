@@ -218,8 +218,8 @@ function RegisterMechanic() {
             <CardHeader><CardTitle>Personal info</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <Field label="Your trade *" className="sm:col-span-2">
-                <select value={f.trade} onChange={(e) => setF({ ...f, trade: e.target.value })} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="" disabled>Select Trade</option>
+                <select value={f.trade} onChange={(e) => setF((prev) => ({ ...prev, trade: e.target.value || "" }))} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">Select Trade</option>
                   {TRADES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
                 </select>
               </Field>
