@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NIGERIA_LGAS, NIGERIA_STATES, SERVICES, TRADES, formatNaira, isValidNigeriaLga } from "@/lib/constants";
 import { verifyPayment } from "@/lib/payments.functions";
 
@@ -53,11 +54,14 @@ function RegisterMechanic() {
   const [step, setStep] = useState<1 | 2 | 3>(existing ? (existing.paid ? 3 : 2) : 1);
   const [saving, setSaving] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [customSkillDialogOpen, setCustomSkillDialogOpen] = useState(false);
+  const [customSkillError, setCustomSkillError] = useState("");
 
   const [f, setF] = useState({
     full_name: existing?.full_name ?? profile?.full_name ?? "",
     business_name: existing?.business_name ?? "",
     trade: ((existing as unknown as { trade?: string })?.trade) ?? "",
+    other_skill: existing?.other_skill ?? "",
     phone: existing?.phone ?? profile?.phone ?? "",
     whatsapp: existing?.whatsapp ?? "",
     email: existing?.email ?? user.email ?? "",
@@ -140,13 +144,15 @@ function RegisterMechanic() {
       return toast.error("Please fill required fields.");
     }
     if (!f.trade) return toast.error("Please select your trade.");
+    if (f.trade === "other" && !f.other_skill.trim()) return toast.error("Please enter your skill or trade.");
     if (!f.id_document_url) {
       return toast.error("Government ID is required before you can submit your artisan registration.");
     }
     setSaving(true);
-    const { years_experience, ...profileFields } = f;
+    const { years_experience, other_skill, ...profileFields } = f;
     const payload = {
       ...profileFields,
+      other_skill: f.trade === "other" ? other_skill.trim() : null,
       user_id: user.id,
       ...(years_experience === "" ? {} : { years_experience: Number(years_experience) }),
     } as unknown as Record<string, unknown>;
@@ -157,6 +163,21 @@ function RegisterMechanic() {
     if (error) return toast.error(error.message);
     toast.success("Profile saved. Complete payment to activate your account.");
     setStep(2);
+  }
+
+  function handleTradeChange(trade: string) {
+    setF((prev) => ({ ...prev, trade, other_skill: trade === "other" ? prev.other_skill : "" }));
+    setCustomSkillError("");
+    setCustomSkillDialogOpen(trade === "other");
+  }
+
+  function continueWithCustomSkill() {
+    if (!f.other_skill.trim()) {
+      setCustomSkillError("Please enter your skill or trade.");
+      return;
+    }
+    setCustomSkillError("");
+    setCustomSkillDialogOpen(false);
   }
 
   async function startPayment() {
@@ -218,10 +239,11 @@ function RegisterMechanic() {
             <CardHeader><CardTitle>Personal info</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <Field label="Your trade *" className="sm:col-span-2">
-                <select value={f.trade} onChange={(e) => setF((prev) => ({ ...prev, trade: e.target.value || "" }))} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <select value={f.trade} onChange={(e) => handleTradeChange(e.target.value || "")} required className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
                   <option value="">Select Trade</option>
                   {TRADES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
                 </select>
+                {f.trade === "other" && f.other_skill && <p className="mt-1 text-xs text-muted-foreground">Custom skill: <span className="font-medium text-foreground">{f.other_skill}</span></p>}
               </Field>
               <Field label="Full name *"><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} required /></Field>
               <Field label="Business name (optional)"><Input value={f.business_name} onChange={(e) => setF({ ...f, business_name: e.target.value })} placeholder="Optional" /></Field>
@@ -330,6 +352,21 @@ function RegisterMechanic() {
           </Button>
         </form>
       )}
+
+      <Dialog open={customSkillDialogOpen} onOpenChange={setCustomSkillDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Type Your Skill</DialogTitle>
+            <DialogDescription>Can&apos;t find your skill in the list? Enter the skill or trade you specialize in.</DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="other-skill">Your skill or trade *</Label>
+            <Input id="other-skill" value={f.other_skill} onChange={(e) => { setF((prev) => ({ ...prev, other_skill: e.target.value })); setCustomSkillError(""); }} placeholder="Enter your skill or trade" autoFocus />
+            {customSkillError && <p className="mt-2 text-sm text-destructive">{customSkillError}</p>}
+          </div>
+          <DialogFooter><Button type="button" onClick={continueWithCustomSkill}>Continue</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {step === 2 && (
         <Card className="shadow-elegant">

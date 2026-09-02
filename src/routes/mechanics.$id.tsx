@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { tradeLabel } from "@/lib/constants";
+import { artisanTradeLabel } from "@/lib/constants";
 
 import { MECHANIC_PUBLIC_COLUMNS } from "@/lib/constants";
 
@@ -119,7 +119,7 @@ function MechanicProfile() {
                 <Badge className="gap-1 bg-primary"><ShieldCheck className="h-3.5 w-3.5" /> Verified</Badge>
               )}
             </div>
-            <p className="text-sm font-medium text-primary">{tradeLabel((m as unknown as { trade?: string }).trade ?? "generator_mechanic")}</p>
+            <p className="text-sm font-medium text-primary">{artisanTradeLabel(m.trade ?? "generator_mechanic", m.other_skill)}</p>
             {m.business_name && <p className="text-muted-foreground">{m.business_name}</p>}
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
               <span className="flex items-center gap-1"><Star className="h-4 w-4 fill-warning text-warning" /> <b>{Number(m.rating_avg).toFixed(1)}</b> <span className="text-muted-foreground">({m.rating_count} reviews)</span></span>

@@ -167,6 +167,7 @@ export type Database = {
           id_document_url: string | null
           latitude: number | null
           longitude: number | null
+          other_skill: string | null
           paid: boolean
           phone: string
           profile_picture_url: string | null
@@ -198,6 +199,7 @@ export type Database = {
           id_document_url?: string | null
           latitude?: number | null
           longitude?: number | null
+          other_skill?: string | null
           paid?: boolean
           phone: string
           profile_picture_url?: string | null
@@ -229,6 +231,7 @@ export type Database = {
           id_document_url?: string | null
           latitude?: number | null
           longitude?: number | null
+          other_skill?: string | null
           paid?: boolean
           phone?: string
           profile_picture_url?: string | null

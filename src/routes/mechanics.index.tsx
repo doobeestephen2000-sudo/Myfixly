@@ -61,6 +61,8 @@ function MechanicsList() {
     return mechanics.filter((m) =>
       m.full_name.toLowerCase().includes(term) ||
       (m.business_name ?? "").toLowerCase().includes(term) ||
+      (m.other_skill ?? "").toLowerCase().includes(term) ||
+      m.trade.toLowerCase().includes(term) ||
       m.services.some((s) => s.toLowerCase().includes(term)) ||
       m.city.toLowerCase().includes(term)
     );

@@ -39,6 +39,12 @@ export function tradeLabel(key: string): string {
   return TRADES.find((t) => t.key === key)?.label ?? "Skilled Artisan";
 }
 
+// `other_skill` is customer-facing only for the catch-all trade. Keeping the
+// original key preserves the predefined trade filters and registration flow.
+export function artisanTradeLabel(trade: string, otherSkill?: string | null): string {
+  return trade === "other" && otherSkill?.trim() ? otherSkill.trim() : tradeLabel(trade);
+}
+
 export const GENERATOR_BRANDS = [
   "Honda", "Yamaha", "Elepaq", "Sumec Firman", "Tiger", "Lutian", "Perkins",
   "Cummins", "Caterpillar", "Mikano", "FG Wilson", "Kipor", "Senci", "Thermocool",
@@ -67,4 +73,4 @@ export function formatNaira(amount: number): string {
 // available to owners/admins via the get_mechanic_id_document RPC or the
 // authenticated dashboard views.
 export const MECHANIC_PUBLIC_COLUMNS =
-  "id,user_id,full_name,business_name,profile_picture_url,state,city,area,years_experience,brands,services,bio,status,availability,verified,paid,featured,rating_avg,rating_count,trade,created_at,updated_at";
+  "id,user_id,full_name,business_name,profile_picture_url,state,city,area,years_experience,brands,services,bio,status,availability,verified,paid,featured,rating_avg,rating_count,trade,other_skill,created_at,updated_at";

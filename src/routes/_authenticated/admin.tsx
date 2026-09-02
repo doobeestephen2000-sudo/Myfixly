@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { formatNaira } from "@/lib/constants";
+import { artisanTradeLabel, formatNaira } from "@/lib/constants";
 import type { Database } from "@/integrations/supabase/types";
 
 type Mechanic = Database["public"]["Tables"]["mechanics"]["Row"];
@@ -127,6 +127,7 @@ function Admin() {
                     {m.paid && <Badge variant="secondary">Paid</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{m.city}, {m.state} · {m.email} · {m.phone}</p>
+                  <p className="mt-1 text-sm font-medium text-primary">{artisanTradeLabel(m.trade, m.other_skill)}</p>
                   <p className="text-xs text-muted-foreground">Joined {new Date(m.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
